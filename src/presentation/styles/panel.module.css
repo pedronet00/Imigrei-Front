@@ -1,0 +1,145 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 880px;
+}
+
+.intro {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  max-width: 640px;
+}
+
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.cardHeader {
+  margin-bottom: var(--space-5);
+}
+
+.cardTitle {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.cardDescription {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.fullRow {
+  grid-column: 1 / -1;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.muted {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.details dt {
+  color: var(--text-tertiary);
+}
+
+.details dd {
+  color: var(--text-primary);
+  font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Reports */
+.reportGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-4);
+}
+
+.reportCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.reportHead {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.reportIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reportFilters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.reportFooter {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.reportFooter > :first-child {
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .formGrid,
+  .reportFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .reportGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .details {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .details dd {
+    margin-bottom: var(--space-2);
+  }
+}
