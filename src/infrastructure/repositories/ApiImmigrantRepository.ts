@@ -178,7 +178,7 @@ export function mapImmigrantToApiCreateDto(
     nomeMae: data.motherName || '',
     nomePai: data.fatherName || '',
     taxaRnm: data.rnmFeePaid ?? true,
-    documentoViagem: data.travelDocumentType ?? 1,
+    documentoViagem: data.travelDocumentType ?? 0,
     paisEmissorDocumentoViagem: data.travelDocumentIssuerCountry || '',
     numeroDocumentoViagem: data.travelDocumentNumber || '',
     dataEntradaBrasil: data.entryDate || new Date().toISOString(),

@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { useImmigrants } from '../../contexts/ImmigrantContext';
 import { useToast } from '../../components/ui/Toast';
-import type { Immigrant, Gender, MaritalStatus, EntryMeans, ReferralSource } from '../../../domain/entities/Immigrant';
+import type { Immigrant, Address, Gender, MaritalStatus, EntryMeans, ReferralSource } from '../../../domain/entities/Immigrant';
 import styles from './ImmigrantForm.module.css';
 
 const STEPS = [
@@ -51,12 +51,62 @@ const REFERRAL_OPTIONS = [
   { value: 'outro', label: 'Outro' },
 ];
 
+// StatusEmissaoCPFEnum
+const CPF_STATUS_OPTIONS = [
+  { value: '0', label: 'Não aplicável' },
+  { value: '1', label: 'Pendente' },
+  { value: '2', label: 'Formulário preenchido' },
+  { value: '3', label: 'Aguardando documentação' },
+  { value: '4', label: 'Concluído' },
+];
+const CPF_STATUS_CONCLUIDO = 4;
+
+// DocumentoViagemEnum
+const TRAVEL_DOCUMENT_OPTIONS = [
+  { value: '0', label: 'Passaporte' },
+  { value: '1', label: 'Laissez-passer' },
+  { value: '2', label: 'Autorização de retorno ao Brasil' },
+  { value: '3', label: 'Salvo-conduto' },
+  { value: '4', label: 'Carteira de marítimo' },
+  { value: '5', label: 'Carteira de matrícula consular' },
+  { value: '6', label: 'Documento de identidade civil estrangeiro' },
+  { value: '7', label: 'Certificado de membro de tripulação aérea' },
+  { value: '8', label: 'Outros' },
+];
+
+const RNM_FEE_OPTIONS = [
+  { value: 'true', label: 'Sim' },
+  { value: 'false', label: 'Não' },
+];
+
 const STATES = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
   'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
 ].map((s) => ({ value: s, label: s }));
 
 type FormData = Omit<Immigrant, 'id' | 'createdAt' | 'updatedAt'>;
+
+const emptyAddress: Address = {
+  street: '',
+  number: '',
+  complement: '',
+  neighborhood: '',
+  city: '',
+  state: '',
+  zipCode: '',
+};
+
+const digitsOf = (value?: string) => (value || '').replace(/\D/g, '');
+
+// Espelha as regras de Imigrante.Validate() no back-end
+const isAddressComplete = (a?: Address) =>
+  !!a &&
+  /^\d{5}-?\d{3}$/.test(a.zipCode) &&
+  !!a.street.trim() &&
+  Number(digitsOf(a.number)) > 0 &&
+  !!a.neighborhood.trim() &&
+  !!a.city.trim() &&
+  !!a.state;
 
 const emptyForm: FormData = {
   fullName: '',
@@ -74,21 +124,14 @@ const emptyForm: FormData = {
   entryState: '',
   entryMeans: 'terrestre' as EntryMeans,
   entryCity: '',
-  brazilAddress: {
-    street: '',
-    number: '',
-    complement: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    zipCode: '',
-  },
+  brazilAddress: { ...emptyAddress },
+  workAddress: { ...emptyAddress },
   phone: '',
   referralSource: 'semear' as ReferralSource,
   mainLanguage: '',
   cpfStatus: 1,
   rnmFeePaid: true,
-  travelDocumentType: 1,
+  travelDocumentType: 0,
   travelDocumentIssuerCountry: '',
   travelDocumentNumber: '',
 };
@@ -101,7 +144,6 @@ export function ImmigrantForm() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [loading, setLoading] = useState(false);
-  const [hasWork, setHasWork] = useState(false);
   const isEdit = !!id;
 
   useEffect(() => {
@@ -109,14 +151,17 @@ export function ImmigrantForm() {
       getById(id).then((data) => {
         if (data) {
           const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = data;
-          setForm(rest);
-          if (data.workAddress) setHasWork(true);
+          setForm({
+            ...emptyForm,
+            ...rest,
+            workAddress: { ...emptyAddress, ...rest.workAddress },
+          });
         }
       });
     }
   }, [id, getById]);
 
-  const updateField = (field: string, value: string) => {
+  const updateField = (field: keyof FormData, value: FormData[keyof FormData]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -131,9 +176,6 @@ export function ImmigrantForm() {
     setLoading(true);
     try {
       const data = { ...form };
-      if (!hasWork) {
-        delete (data as any).workAddress;
-      }
 
       if (isEdit) {
         await update(id!, data);
@@ -153,13 +195,35 @@ export function ImmigrantForm() {
   const canAdvance = () => {
     switch (step) {
       case 0:
-        return form.fullName && form.nationality && form.birthDate;
+        return (
+          !!form.fullName.trim() &&
+          !!form.motherName.trim() &&
+          !!form.fatherName.trim() &&
+          !!form.nationality.trim() &&
+          !!form.birthCity.trim() &&
+          !!form.birthDate &&
+          !!form.mainLanguage?.trim() &&
+          !!form.occupation.trim() &&
+          (form.cpfStatus !== CPF_STATUS_CONCLUIDO || digitsOf(form.cpf).length === 11)
+        );
       case 1:
-        return form.entryDate && form.entryState && form.entryCity;
+        return (
+          !!form.travelDocumentIssuerCountry?.trim() &&
+          !!form.travelDocumentNumber?.trim() &&
+          !!form.entryDate &&
+          !!form.entryState &&
+          !!form.entryCity.trim()
+        );
       case 2:
-        return form.brazilAddress.street && form.brazilAddress.city && form.brazilAddress.state;
-      case 3:
-        return form.phone;
+        return isAddressComplete(form.brazilAddress) && isAddressComplete(form.workAddress);
+      case 3: {
+        const phoneDigits = digitsOf(form.phone).length;
+        return (
+          /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email) &&
+          phoneDigits >= 10 &&
+          phoneDigits <= 11
+        );
+      }
       default:
         return true;
     }
@@ -173,6 +237,9 @@ export function ImmigrantForm() {
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
   };
 
+  const formatCEP = (value: string) =>
+    value.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
+
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
     if (digits.length <= 10) {
@@ -183,6 +250,67 @@ export function ImmigrantForm() {
     return digits
       .replace(/(\d{2})(\d)/, '($1) $2')
       .replace(/(\d{5})(\d)/, '$1-$2');
+  };
+
+  const renderAddressFields = (
+    type: 'brazilAddress' | 'workAddress',
+    complementPlaceholder: string
+  ) => {
+    const address = form[type] ?? emptyAddress;
+    return (
+      <>
+        <Input
+          label="CEP"
+          required
+          value={address.zipCode}
+          onChange={(e) => updateAddress(type, 'zipCode', formatCEP((e.target as HTMLInputElement).value))}
+          placeholder="00000-000"
+        />
+        <Input
+          label="Rua"
+          required
+          value={address.street}
+          onChange={(e) => updateAddress(type, 'street', (e.target as HTMLInputElement).value)}
+          placeholder="Nome da rua/avenida"
+        />
+        <Input
+          label="Número"
+          required
+          inputMode="numeric"
+          value={address.number}
+          onChange={(e) => updateAddress(type, 'number', digitsOf((e.target as HTMLInputElement).value))}
+          placeholder="Nº"
+        />
+        <Input
+          label="Complemento"
+          value={address.complement || ''}
+          onChange={(e) => updateAddress(type, 'complement', (e.target as HTMLInputElement).value)}
+          placeholder={complementPlaceholder}
+        />
+        <Input
+          label="Bairro"
+          required
+          value={address.neighborhood}
+          onChange={(e) => updateAddress(type, 'neighborhood', (e.target as HTMLInputElement).value)}
+          placeholder="Bairro"
+        />
+        <Input
+          label="Cidade"
+          required
+          value={address.city}
+          onChange={(e) => updateAddress(type, 'city', (e.target as HTMLInputElement).value)}
+          placeholder="Cidade"
+        />
+        <Select
+          label="Estado"
+          required
+          options={STATES}
+          value={address.state}
+          onChange={(e) => updateAddress(type, 'state', e.target.value)}
+          placeholder="UF"
+        />
+      </>
+    );
   };
 
   return (
@@ -236,12 +364,14 @@ export function ImmigrantForm() {
               </div>
               <Input
                 label="Nome da Mãe"
+                required
                 value={form.motherName}
                 onChange={(e) => updateField('motherName', (e.target as HTMLInputElement).value)}
                 placeholder="Nome da mãe"
               />
               <Input
                 label="Nome do Pai"
+                required
                 value={form.fatherName}
                 onChange={(e) => updateField('fatherName', (e.target as HTMLInputElement).value)}
                 placeholder="Nome do pai"
@@ -255,6 +385,7 @@ export function ImmigrantForm() {
               />
               <Input
                 label="Cidade de Nascimento"
+                required
                 value={form.birthCity}
                 onChange={(e) => updateField('birthCity', (e.target as HTMLInputElement).value)}
                 placeholder="Cidade de nascimento"
@@ -279,18 +410,39 @@ export function ImmigrantForm() {
                 onChange={(e) => updateField('maritalStatus', e.target.value)}
               />
               <Input
+                label="Idioma Principal"
+                required
+                value={form.mainLanguage || ''}
+                onChange={(e) => updateField('mainLanguage', (e.target as HTMLInputElement).value)}
+                placeholder="Ex: Espanhol, Crioulo haitiano..."
+              />
+              <Input
                 label="Ocupação Principal"
+                required
                 value={form.occupation}
                 onChange={(e) => updateField('occupation', (e.target as HTMLInputElement).value)}
                 placeholder="Ex: Engenheiro, Professor..."
               />
+              <Select
+                label="Status de Emissão do CPF"
+                options={CPF_STATUS_OPTIONS}
+                value={String(form.cpfStatus ?? 1)}
+                onChange={(e) => updateField('cpfStatus', Number(e.target.value))}
+              />
               <Input
                 label="CPF"
+                required={form.cpfStatus === CPF_STATUS_CONCLUIDO}
                 value={form.cpf}
                 onChange={(e) =>
                   updateField('cpf', formatCPF((e.target as HTMLInputElement).value))
                 }
                 placeholder="000.000.000-00"
+              />
+              <Select
+                label="Taxa do RNM paga?"
+                options={RNM_FEE_OPTIONS}
+                value={String(form.rnmFeePaid ?? true)}
+                onChange={(e) => updateField('rnmFeePaid', e.target.value === 'true')}
               />
             </div>
           </>
@@ -304,6 +456,32 @@ export function ImmigrantForm() {
               Dados sobre a chegada ao território brasileiro.
             </p>
             <div className={styles.fieldGrid}>
+              <div className={styles.sectionLabel}>Documento de Viagem</div>
+              <Select
+                label="Tipo de Documento"
+                required
+                options={TRAVEL_DOCUMENT_OPTIONS}
+                value={String(form.travelDocumentType ?? 0)}
+                onChange={(e) => updateField('travelDocumentType', Number(e.target.value))}
+              />
+              <Input
+                label="Número do Documento"
+                required
+                value={form.travelDocumentNumber || ''}
+                onChange={(e) => updateField('travelDocumentNumber', (e.target as HTMLInputElement).value)}
+                placeholder="Número do documento"
+              />
+              <Input
+                label="País Emissor do Documento"
+                required
+                value={form.travelDocumentIssuerCountry || ''}
+                onChange={(e) => updateField('travelDocumentIssuerCountry', (e.target as HTMLInputElement).value)}
+                placeholder="Ex: Venezuela, Haiti..."
+              />
+
+              <div className={styles.sectionDivider} />
+
+              <div className={styles.sectionLabel}>Chegada</div>
               <Input
                 label="Data de Entrada"
                 type="date"
@@ -345,108 +523,12 @@ export function ImmigrantForm() {
             </p>
             <div className={styles.fieldGrid}>
               <div className={styles.sectionLabel}>Endereço Residencial</div>
-              <Input
-                label="Rua"
-                required
-                value={form.brazilAddress.street}
-                onChange={(e) => updateAddress('brazilAddress', 'street', (e.target as HTMLInputElement).value)}
-                placeholder="Nome da rua/avenida"
-              />
-              <Input
-                label="Número"
-                value={form.brazilAddress.number}
-                onChange={(e) => updateAddress('brazilAddress', 'number', (e.target as HTMLInputElement).value)}
-                placeholder="Nº"
-              />
-              <Input
-                label="Complemento"
-                value={form.brazilAddress.complement || ''}
-                onChange={(e) => updateAddress('brazilAddress', 'complement', (e.target as HTMLInputElement).value)}
-                placeholder="Apto, bloco..."
-              />
-              <Input
-                label="Bairro"
-                value={form.brazilAddress.neighborhood}
-                onChange={(e) => updateAddress('brazilAddress', 'neighborhood', (e.target as HTMLInputElement).value)}
-                placeholder="Bairro"
-              />
-              <Input
-                label="Cidade"
-                required
-                value={form.brazilAddress.city}
-                onChange={(e) => updateAddress('brazilAddress', 'city', (e.target as HTMLInputElement).value)}
-                placeholder="Cidade"
-              />
-              <Select
-                label="Estado"
-                required
-                options={STATES}
-                value={form.brazilAddress.state}
-                onChange={(e) => updateAddress('brazilAddress', 'state', e.target.value)}
-                placeholder="UF"
-              />
-              <Input
-                label="CEP"
-                value={form.brazilAddress.zipCode}
-                onChange={(e) => updateAddress('brazilAddress', 'zipCode', (e.target as HTMLInputElement).value)}
-                placeholder="00000-000"
-              />
+              {renderAddressFields('brazilAddress', 'Apto, bloco...')}
 
               <div className={styles.sectionDivider} />
 
-              <div className={styles.fieldFull}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={hasWork}
-                    onChange={(e) => setHasWork(e.target.checked)}
-                  />
-                  Possui endereço de trabalho
-                </label>
-              </div>
-
-              {hasWork && (
-                <>
-                  <div className={styles.sectionLabel}>Endereço do Trabalho</div>
-                  <Input
-                    label="Rua"
-                    value={form.workAddress?.street || ''}
-                    onChange={(e) => updateAddress('workAddress', 'street', (e.target as HTMLInputElement).value)}
-                    placeholder="Nome da rua/avenida"
-                  />
-                  <Input
-                    label="Número"
-                    value={form.workAddress?.number || ''}
-                    onChange={(e) => updateAddress('workAddress', 'number', (e.target as HTMLInputElement).value)}
-                    placeholder="Nº"
-                  />
-                  <Input
-                    label="Complemento"
-                    value={form.workAddress?.complement || ''}
-                    onChange={(e) => updateAddress('workAddress', 'complement', (e.target as HTMLInputElement).value)}
-                    placeholder="Sala, andar..."
-                  />
-                  <Input
-                    label="Bairro"
-                    value={form.workAddress?.neighborhood || ''}
-                    onChange={(e) => updateAddress('workAddress', 'neighborhood', (e.target as HTMLInputElement).value)}
-                    placeholder="Bairro"
-                  />
-                  <Input
-                    label="Cidade"
-                    value={form.workAddress?.city || ''}
-                    onChange={(e) => updateAddress('workAddress', 'city', (e.target as HTMLInputElement).value)}
-                    placeholder="Cidade"
-                  />
-                  <Select
-                    label="Estado"
-                    options={STATES}
-                    value={form.workAddress?.state || ''}
-                    onChange={(e) => updateAddress('workAddress', 'state', e.target.value)}
-                    placeholder="UF"
-                  />
-                </>
-              )}
+              <div className={styles.sectionLabel}>Endereço do Trabalho</div>
+              {renderAddressFields('workAddress', 'Sala, andar...')}
             </div>
           </>
         )}
@@ -461,6 +543,7 @@ export function ImmigrantForm() {
             <div className={styles.fieldGrid}>
               <Input
                 label="E-mail"
+                required
                 type="email"
                 value={form.email}
                 onChange={(e) => updateField('email', (e.target as HTMLInputElement).value)}
