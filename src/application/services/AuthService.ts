@@ -1,3 +1,5 @@
+import { API_BASE_URL as API_ROOT_URL } from '../../infrastructure/http/apiBaseUrl';
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -28,7 +30,7 @@ interface AuthResponseDto {
   tokenType?: string | null;
 }
 
-const API_BASE_URL = `${import.meta.env.VITE_API_URL ?? 'https://localhost:7230/api'}/Auth`;
+const API_BASE_URL = `${API_ROOT_URL}/Auth`;
 
 const TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';

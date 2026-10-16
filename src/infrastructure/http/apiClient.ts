@@ -1,8 +1,7 @@
 import { getAccessToken } from '../../application/services/AuthService';
 import type { HistoryType } from '../../domain/entities/HistoryEntry';
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? 'https://localhost:7230/api';
+export { API_BASE_URL } from './apiBaseUrl';
 
 export class UnauthorizedError extends Error {
   constructor() {
