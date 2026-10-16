@@ -259,7 +259,9 @@ export function mapApiDtoToImmigrant(apiItem: any): Immigrant {
     phone: apiItem.telefone || apiItem.phone || '',
     referralSource: apiItem.referralSource || 'semear',
     referralSourceDetail: apiItem.referralSourceDetail,
-    createdAt: apiItem.createdAt || new Date().toISOString(),
+    createdAt: apiItem.dataCadastro
+      ? parseApiUtcDate(apiItem.dataCadastro)
+      : apiItem.createdAt || new Date().toISOString(),
     updatedAt: apiItem.updatedAt || new Date().toISOString(),
     mainLanguage: apiItem.idiomaPrincipal || apiItem.mainLanguage,
     cpfStatus: apiItem.statusEmissaoCPF ?? apiItem.cpfStatus,

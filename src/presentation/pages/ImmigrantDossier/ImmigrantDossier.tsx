@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Download,
+  Phone,
 } from 'lucide-react';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Avatar } from '../../components/ui/Avatar';
@@ -24,10 +25,15 @@ import { Select } from '../../components/ui/Select';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useImmigrants } from '../../contexts/ImmigrantContext';
 import { useToast } from '../../components/ui/Toast';
-import type { Immigrant } from '../../../domain/entities/Immigrant';
+import type { Immigrant, Address } from '../../../domain/entities/Immigrant';
 import type { ImmigrantDocument, DocumentType } from '../../../domain/entities/Document';
 import type { HistoryEntry, HistoryType } from '../../../domain/entities/HistoryEntry';
 import { HISTORY_TYPE_CONFIG } from '../../constants/historyTypes';
+import {
+  CPF_STATUS_OPTIONS,
+  TRAVEL_DOCUMENT_OPTIONS,
+  optionLabel,
+} from '../../constants/immigrantOptions';
 import { saveBlob } from '../../utils/download';
 import styles from './ImmigrantDossier.module.css';
 
@@ -54,13 +60,6 @@ const HISTORY_TYPE_OPTIONS = Object.entries(HISTORY_TYPE_CONFIG).map(([value, { 
   label,
 }));
 
-const GENDER_LABELS: Record<string, string> = {
-  masculino: 'Masculino',
-  feminino: 'Feminino',
-  outro: 'Outro',
-  nao_informado: 'Não informado',
-};
-
 const MARITAL_LABELS: Record<string, string> = {
   solteiro: 'Solteiro(a)',
   casado: 'Casado(a)',
@@ -75,17 +74,6 @@ const ENTRY_MEANS_LABELS: Record<string, string> = {
   terrestre: 'Terrestre',
   maritimo: 'Marítimo',
   fluvial: 'Fluvial',
-};
-
-const REFERRAL_LABELS: Record<string, string> = {
-  policia_federal: 'Polícia Federal',
-  semear: 'Semear',
-  tv: 'TV',
-  internet: 'Internet',
-  amigos_familia: 'Amigos/Família',
-  igreja: 'Igreja',
-  ong: 'ONG',
-  outro: 'Outro',
 };
 
 export function ImmigrantDossier() {
@@ -254,16 +242,24 @@ export function ImmigrantDossier() {
       minute: '2-digit',
     });
 
-  const formatAddress = (addr: Immigrant['brazilAddress']) => {
-    const parts = [
-      `${addr.street}, ${addr.number}`,
-      addr.complement,
-      addr.neighborhood,
-      `${addr.city} - ${addr.state}`,
-      addr.zipCode,
-    ].filter(Boolean);
-    return parts.join(', ');
-  };
+  const renderRow = (label: string, value?: string | null | false) => (
+    <div className={styles.dataRow}>
+      <span className={styles.dataLabel}>{label}</span>
+      <span className={styles.dataValue}>{value || '—'}</span>
+    </div>
+  );
+
+  const renderAddressRows = (addr?: Address) => (
+    <>
+      {renderRow('CEP', addr?.zipCode)}
+      {renderRow('Logradouro', addr?.street)}
+      {renderRow('Número', addr?.number)}
+      {renderRow('Complemento', addr?.complement)}
+      {renderRow('Bairro', addr?.neighborhood)}
+      {renderRow('Cidade', addr?.city)}
+      {renderRow('UF', addr?.state)}
+    </>
+  );
 
   if (loading) {
     return (
@@ -371,34 +367,33 @@ export function ImmigrantDossier() {
               <User size={14} />
               Identificação
             </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Nome completo</span>
-              <span className={styles.dataValue}>{immigrant.fullName}</span>
+            {renderRow('Nome completo', immigrant.fullName)}
+            {renderRow('Nome da mãe', immigrant.motherName)}
+            {renderRow('Nome do pai', immigrant.fatherName)}
+            {renderRow('Data de nascimento', immigrant.birthDate && formatDate(immigrant.birthDate))}
+            {renderRow('Estado civil', MARITAL_LABELS[immigrant.maritalStatus])}
+            {renderRow('Idioma principal', immigrant.mainLanguage)}
+            {renderRow('Ocupação principal', immigrant.occupation)}
+            {renderRow('Data de cadastro', immigrant.createdAt && formatDateTime(immigrant.createdAt))}
+          </div>
+
+          <div className={styles.dataCard}>
+            <div className={styles.dataCardTitle}>
+              <FileText size={14} />
+              Documentação
             </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Nome da mãe</span>
-              <span className={styles.dataValue}>{immigrant.motherName || '—'}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Nome do pai</span>
-              <span className={styles.dataValue}>{immigrant.fatherName || '—'}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Data de nascimento</span>
-              <span className={styles.dataValue}>{formatDate(immigrant.birthDate)}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Sexo</span>
-              <span className={styles.dataValue}>{GENDER_LABELS[immigrant.gender]}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Estado civil</span>
-              <span className={styles.dataValue}>{MARITAL_LABELS[immigrant.maritalStatus]}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>CPF</span>
-              <span className={styles.dataValue}>{immigrant.cpf || '—'}</span>
-            </div>
+            {renderRow('Status do CPF', optionLabel(CPF_STATUS_OPTIONS, immigrant.cpfStatus))}
+            {renderRow('CPF', immigrant.cpf)}
+            {renderRow(
+              'Taxa do RNM paga',
+              immigrant.rnmFeePaid === undefined ? undefined : immigrant.rnmFeePaid ? 'Sim' : 'Não'
+            )}
+            {renderRow(
+              'Documento de viagem',
+              optionLabel(TRAVEL_DOCUMENT_OPTIONS, immigrant.travelDocumentType)
+            )}
+            {renderRow('Nº do documento', immigrant.travelDocumentNumber)}
+            {renderRow('País emissor', immigrant.travelDocumentIssuerCountry)}
           </div>
 
           <div className={styles.dataCard}>
@@ -406,70 +401,37 @@ export function ImmigrantDossier() {
               <Globe size={14} />
               Origem e Entrada
             </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Nacionalidade</span>
-              <span className={styles.dataValue}>{immigrant.nationality}</span>
+            {renderRow('País de origem', immigrant.nationality)}
+            {renderRow('Cidade de origem', immigrant.birthCity)}
+            {renderRow('Data de entrada', immigrant.entryDate && formatDate(immigrant.entryDate))}
+            {renderRow('Meio de entrada', ENTRY_MEANS_LABELS[immigrant.entryMeans])}
+            {renderRow('Cidade de entrada', immigrant.entryCity)}
+            {renderRow('UF de entrada', immigrant.entryState)}
+          </div>
+
+          <div className={styles.dataCard}>
+            <div className={styles.dataCardTitle}>
+              <Phone size={14} />
+              Contato
             </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Cidade natal</span>
-              <span className={styles.dataValue}>{immigrant.birthCity || '—'}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Data de entrada</span>
-              <span className={styles.dataValue}>{formatDate(immigrant.entryDate)}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Estado de entrada</span>
-              <span className={styles.dataValue}>{immigrant.entryState}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Cidade de entrada</span>
-              <span className={styles.dataValue}>{immigrant.entryCity}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Meio de entrada</span>
-              <span className={styles.dataValue}>{ENTRY_MEANS_LABELS[immigrant.entryMeans]}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Como chegou</span>
-              <span className={styles.dataValue}>
-                {REFERRAL_LABELS[immigrant.referralSource]}
-                {immigrant.referralSourceDetail && ` (${immigrant.referralSourceDetail})`}
-              </span>
-            </div>
+            {renderRow('E-mail', immigrant.email)}
+            {renderRow('Telefone', immigrant.phone)}
           </div>
 
           <div className={styles.dataCard}>
             <div className={styles.dataCardTitle}>
               <MapPin size={14} />
-              Contato e Endereço
+              Endereço Residencial
             </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>E-mail</span>
-              <span className={styles.dataValue}>{immigrant.email || '—'}</span>
+            {renderAddressRows(immigrant.brazilAddress)}
+          </div>
+
+          <div className={styles.dataCard}>
+            <div className={styles.dataCardTitle}>
+              <Briefcase size={14} />
+              Endereço do Trabalho
             </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Telefone</span>
-              <span className={styles.dataValue}>{immigrant.phone}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Ocupação</span>
-              <span className={styles.dataValue}>{immigrant.occupation || '—'}</span>
-            </div>
-            <div className={styles.dataRow}>
-              <span className={styles.dataLabel}>Endereço</span>
-              <span className={styles.dataValue} style={{ maxWidth: 220, textAlign: 'right' }}>
-                {formatAddress(immigrant.brazilAddress)}
-              </span>
-            </div>
-            {immigrant.workAddress && (
-              <div className={styles.dataRow}>
-                <span className={styles.dataLabel}>Trabalho</span>
-                <span className={styles.dataValue} style={{ maxWidth: 220, textAlign: 'right' }}>
-                  {formatAddress(immigrant.workAddress)}
-                </span>
-              </div>
-            )}
+            {renderAddressRows(immigrant.workAddress)}
           </div>
         </div>
       )}

@@ -8,6 +8,11 @@ import { Select } from '../../components/ui/Select';
 import { useImmigrants } from '../../contexts/ImmigrantContext';
 import { useToast } from '../../components/ui/Toast';
 import type { Immigrant, Address, Gender, MaritalStatus, EntryMeans, ReferralSource } from '../../../domain/entities/Immigrant';
+import {
+  CPF_STATUS_CONCLUIDO,
+  CPF_STATUS_OPTIONS,
+  TRAVEL_DOCUMENT_OPTIONS,
+} from '../../constants/immigrantOptions';
 import styles from './ImmigrantForm.module.css';
 
 const STEPS = [
@@ -49,29 +54,6 @@ const REFERRAL_OPTIONS = [
   { value: 'igreja', label: 'Igreja' },
   { value: 'ong', label: 'ONG' },
   { value: 'outro', label: 'Outro' },
-];
-
-// StatusEmissaoCPFEnum
-const CPF_STATUS_OPTIONS = [
-  { value: '0', label: 'Não aplicável' },
-  { value: '1', label: 'Pendente' },
-  { value: '2', label: 'Formulário preenchido' },
-  { value: '3', label: 'Aguardando documentação' },
-  { value: '4', label: 'Concluído' },
-];
-const CPF_STATUS_CONCLUIDO = 4;
-
-// DocumentoViagemEnum
-const TRAVEL_DOCUMENT_OPTIONS = [
-  { value: '0', label: 'Passaporte' },
-  { value: '1', label: 'Laissez-passer' },
-  { value: '2', label: 'Autorização de retorno ao Brasil' },
-  { value: '3', label: 'Salvo-conduto' },
-  { value: '4', label: 'Carteira de marítimo' },
-  { value: '5', label: 'Carteira de matrícula consular' },
-  { value: '6', label: 'Documento de identidade civil estrangeiro' },
-  { value: '7', label: 'Certificado de membro de tripulação aérea' },
-  { value: '8', label: 'Outros' },
 ];
 
 const RNM_FEE_OPTIONS = [
@@ -154,6 +136,9 @@ export function ImmigrantForm() {
           setForm({
             ...emptyForm,
             ...rest,
+            // <input type="date"> só aceita YYYY-MM-DD; a API devolve 2003-04-01T00:00:00
+            birthDate: rest.birthDate.slice(0, 10),
+            entryDate: rest.entryDate.slice(0, 10),
             workAddress: { ...emptyAddress, ...rest.workAddress },
           });
         }
