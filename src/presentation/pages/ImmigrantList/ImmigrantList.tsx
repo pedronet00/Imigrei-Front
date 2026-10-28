@@ -119,8 +119,19 @@ export function ImmigrantList() {
 
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Tem certeza que deseja excluir ${name}?`)) {
-      await remove(id);
-      showToast('success', 'Imigrante excluído', `${name} foi removido com sucesso.`);
+      try {
+        await remove(id);
+        showToast('success', 'Imigrante excluído', `${name} foi removido com sucesso.`);
+      } catch (err) {
+        console.error('Falha ao excluir imigrante:', err);
+        showToast(
+          'error',
+          'Erro ao excluir',
+          err instanceof Error && !(err instanceof TypeError)
+            ? err.message
+            : 'Não foi possível conectar ao servidor.'
+        );
+      }
     }
   };
 

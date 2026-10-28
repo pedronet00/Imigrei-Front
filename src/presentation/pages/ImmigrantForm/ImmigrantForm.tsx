@@ -151,9 +151,12 @@ export function ImmigrantForm() {
             workAddress: { ...emptyAddress, ...rest.workAddress },
           });
         }
+      }).catch((err) => {
+        console.error('Falha ao carregar imigrante:', err);
+        showToast('error', 'Erro ao carregar imigrante', err instanceof Error ? err.message : undefined);
       });
     }
-  }, [id, getById]);
+  }, [id, getById, showToast]);
 
   const updateField = (field: keyof FormData, value: FormData[keyof FormData]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -179,8 +182,15 @@ export function ImmigrantForm() {
         showToast('success', 'Cadastro realizado', `${form.fullName} foi cadastrado com sucesso.`);
       }
       navigate('/imigrantes');
-    } catch {
-      showToast('error', 'Erro', 'Ocorreu um erro ao salvar os dados.');
+    } catch (err) {
+      console.error('Falha ao salvar imigrante:', err);
+      showToast(
+        'error',
+        isEdit ? 'Erro ao atualizar cadastro' : 'Erro ao cadastrar',
+        err instanceof Error && !(err instanceof TypeError)
+          ? err.message
+          : 'Não foi possível conectar ao servidor.'
+      );
     } finally {
       setLoading(false);
     }

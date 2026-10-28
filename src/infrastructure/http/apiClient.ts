@@ -18,12 +18,38 @@ export function parseApiUtcDate(value: string): string {
   return /(Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}Z`;
 }
 
+// Extrai a mensagem de erro do corpo da resposta. A API pode devolver
+// { erro }, ProblemDetails ({ detail, title }) ou ValidationProblemDetails ({ errors }).
 export async function readProblemDetail(response: Response): Promise<string | undefined> {
+  let body: unknown;
   try {
-    return (await response.json())?.detail;
+    const text = await response.text();
+    if (!text) return undefined;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      return text.length <= 300 ? text : undefined;
+    }
   } catch {
     return undefined;
   }
+
+  if (typeof body === 'string') return body;
+  if (!body || typeof body !== 'object') return undefined;
+
+  const data = body as Record<string, unknown>;
+  for (const key of ['erro', 'error', 'mensagem', 'message', 'detail']) {
+    if (typeof data[key] === 'string' && data[key]) return data[key] as string;
+  }
+
+  if (data.errors && typeof data.errors === 'object') {
+    const messages = Object.values(data.errors as Record<string, unknown>)
+      .flat()
+      .filter((m): m is string => typeof m === 'string');
+    if (messages.length) return messages.join(' ');
+  }
+
+  return typeof data.title === 'string' ? data.title : undefined;
 }
 
 export function fileNameFromContentDisposition(header: string | null): string | null {

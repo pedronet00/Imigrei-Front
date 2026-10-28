@@ -112,7 +112,11 @@ export function ImmigrantDossier() {
     setLoading(true);
     try {
       const [imm, docs, hist] = await Promise.all([
-        getById(id),
+        getById(id).catch((err) => {
+          console.error('Falha ao carregar imigrante:', err);
+          showToast('error', 'Erro ao carregar imigrante', err instanceof Error ? err.message : undefined);
+          return null;
+        }),
         getDocuments(id).catch((err) => {
           console.error('Falha ao carregar documentos:', err);
           showToast('error', 'Erro ao carregar documentos', err instanceof Error ? err.message : undefined);

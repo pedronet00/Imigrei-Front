@@ -295,22 +295,20 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   }
 
   async getById(id: string): Promise<Immigrant | null> {
-    try {
-      const response = await authFetch(`${this.baseUrl}/${id}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.ok) {
-        const item = await response.json();
-        return mapApiDtoToImmigrant(item);
-      }
-      // Fallback: search in list
-      const all = await this.getAll();
-      return all.find((i) => i.id === id) || null;
-    } catch (error) {
-      console.warn(`API GET /api/Imigrantes/${id} failed, using fallback:`, error);
-      return this.mockFallback.getById(id);
+    const response = await authFetch(`${this.baseUrl}/${id}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (response.status === 401) {
+      throw new UnauthorizedError();
     }
+    if (response.ok) {
+      const item = await response.json();
+      return mapApiDtoToImmigrant(item);
+    }
+    // Fallback: search in list
+    const all = await this.getAll();
+    return all.find((i) => i.id === id) || null;
   }
 
   async create(
@@ -318,76 +316,71 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   ): Promise<Immigrant> {
     const payload = mapImmigrantToApiCreateDto(data);
 
-    try {
-      const response = await authFetch(this.baseUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao cadastrar imigrante (HTTP ${response.status})`);
-      }
-
-      let resData;
-      try {
-        resData = await response.json();
-      } catch {
-        resData = null;
-      }
-
-      if (resData) {
-        return mapApiDtoToImmigrant(resData);
-      }
-
-      return mapApiDtoToImmigrant({ ...payload, id: String(Date.now()) });
-    } catch (error) {
-      console.warn('API POST /api/Imigrantes failed, falling back to mock create:', error);
-      return this.mockFallback.create(data);
+    const response = await authFetch(this.baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (response.status === 401) {
+      throw new UnauthorizedError();
     }
+    if (!response.ok) {
+      const detail = await readProblemDetail(response);
+      throw new Error(detail || `Erro ao cadastrar imigrante (HTTP ${response.status})`);
+    }
+
+    let resData;
+    try {
+      resData = await response.json();
+    } catch {
+      resData = null;
+    }
+
+    if (resData) {
+      return mapApiDtoToImmigrant(resData);
+    }
+
+    return mapApiDtoToImmigrant({ ...payload, id: String(Date.now()) });
   }
 
   async update(id: string, data: Partial<Immigrant>): Promise<Immigrant> {
-    try {
-      const existing = await this.getById(id);
-      const merged = { ...existing, ...data } as Immigrant;
-      const payload = mapImmigrantToApiCreateDto(merged);
+    const existing = await this.getById(id);
+    const merged = { ...existing, ...data } as Immigrant;
+    const payload = mapImmigrantToApiCreateDto(merged);
 
-      const response = await authFetch(`${this.baseUrl}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao atualizar imigrante (HTTP ${response.status})`);
-      }
-
-      let resData;
-      try {
-        resData = await response.json();
-      } catch {
-        resData = merged;
-      }
-
-      return mapApiDtoToImmigrant(resData);
-    } catch (error) {
-      console.warn(`API PUT /api/Imigrantes/${id} failed, using fallback update:`, error);
-      return this.mockFallback.update(id, data);
+    const response = await authFetch(`${this.baseUrl}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (response.status === 401) {
+      throw new UnauthorizedError();
     }
+    if (!response.ok) {
+      const detail = await readProblemDetail(response);
+      throw new Error(detail || `Erro ao atualizar imigrante (HTTP ${response.status})`);
+    }
+
+    let resData;
+    try {
+      resData = await response.json();
+    } catch {
+      resData = merged;
+    }
+
+    return mapApiDtoToImmigrant(resData);
   }
 
   async delete(id: string): Promise<void> {
-    try {
-      const response = await authFetch(`${this.baseUrl}/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        throw new Error(`Erro ao remover imigrante (HTTP ${response.status})`);
-      }
-    } catch (error) {
-      console.warn(`API DELETE /api/Imigrantes/${id} failed, using fallback delete:`, error);
-      await this.mockFallback.delete(id);
+    const response = await authFetch(`${this.baseUrl}/${id}`, {
+      method: 'DELETE',
+    });
+    if (response.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!response.ok) {
+      const detail = await readProblemDetail(response);
+      throw new Error(detail || `Erro ao remover imigrante (HTTP ${response.status})`);
     }
   }
 
