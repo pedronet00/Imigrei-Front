@@ -90,6 +90,15 @@ const isAddressComplete = (a?: Address) =>
   !!a.city.trim() &&
   !!a.state;
 
+const isAddressEmpty = (a?: Address) =>
+  !a ||
+  [a.zipCode, a.street, a.number, a.complement, a.neighborhood, a.city, a.state].every(
+    (v) => !(v || '').trim()
+  );
+
+// Endereço é opcional: vazio é aceito, mas se começou a preencher precisa estar completo
+const isAddressValid = (a?: Address) => isAddressEmpty(a) || isAddressComplete(a);
+
 const emptyForm: FormData = {
   fullName: '',
   motherName: '',
@@ -200,7 +209,7 @@ export function ImmigrantForm() {
           !!form.entryCity.trim()
         );
       case 2:
-        return isAddressComplete(form.brazilAddress) && isAddressComplete(form.workAddress);
+        return isAddressValid(form.brazilAddress) && isAddressValid(form.workAddress);
       case 3: {
         const phoneDigits = digitsOf(form.phone).length;
         return (
@@ -246,21 +255,18 @@ export function ImmigrantForm() {
       <>
         <Input
           label="CEP"
-          required
           value={address.zipCode}
           onChange={(e) => updateAddress(type, 'zipCode', formatCEP((e.target as HTMLInputElement).value))}
           placeholder="00000-000"
         />
         <Input
           label="Rua"
-          required
           value={address.street}
           onChange={(e) => updateAddress(type, 'street', (e.target as HTMLInputElement).value)}
           placeholder="Nome da rua/avenida"
         />
         <Input
           label="Número"
-          required
           inputMode="numeric"
           value={address.number}
           onChange={(e) => updateAddress(type, 'number', digitsOf((e.target as HTMLInputElement).value))}
@@ -274,21 +280,18 @@ export function ImmigrantForm() {
         />
         <Input
           label="Bairro"
-          required
           value={address.neighborhood}
           onChange={(e) => updateAddress(type, 'neighborhood', (e.target as HTMLInputElement).value)}
           placeholder="Bairro"
         />
         <Input
           label="Cidade"
-          required
           value={address.city}
           onChange={(e) => updateAddress(type, 'city', (e.target as HTMLInputElement).value)}
           placeholder="Cidade"
         />
         <Select
           label="Estado"
-          required
           options={STATES}
           value={address.state}
           onChange={(e) => updateAddress(type, 'state', e.target.value)}
@@ -504,7 +507,7 @@ export function ImmigrantForm() {
           <>
             <h3 className={styles.cardTitle}>Endereço no Brasil</h3>
             <p className={styles.cardDescription}>
-              Endereço residencial atual e, se aplicável, do trabalho.
+              Opcional. Se preenchido, informe o endereço completo.
             </p>
             <div className={styles.fieldGrid}>
               <div className={styles.sectionLabel}>Endereço Residencial</div>

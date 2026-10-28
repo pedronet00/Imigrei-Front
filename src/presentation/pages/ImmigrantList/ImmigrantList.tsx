@@ -21,6 +21,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { DropdownMenu } from '../../components/ui/DropdownMenu';
+import { Pagination } from '../../components/ui/Pagination';
 import type { Immigrant } from '../../../domain/entities/Immigrant';
 import { useImmigrants } from '../../contexts/ImmigrantContext';
 import { useToast } from '../../components/ui/Toast';
@@ -52,6 +53,8 @@ export function ImmigrantList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCountry, setFilterCountry] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const countries = useMemo(() => {
     const unique = [...new Set(immigrants.map((i) => i.nationality).filter(Boolean))].sort();
@@ -79,6 +82,40 @@ export function ImmigrantList() {
 
     return list;
   }, [immigrants, searchQuery, filterCountry]);
+
+  // Mantém a página válida quando a lista encolhe (ex.: ao excluir o último item da página)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filtered, currentPage, pageSize]
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setPage(1);
+  };
+
+  const handleCountryChange = (value: string) => {
+    setFilterCountry(value);
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
+  const pagination = (
+    <Pagination
+      page={currentPage}
+      pageSize={pageSize}
+      totalItems={filtered.length}
+      onPageChange={setPage}
+      onPageSizeChange={handlePageSizeChange}
+    />
+  );
 
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Tem certeza que deseja excluir ${name}?`)) {
@@ -154,12 +191,12 @@ export function ImmigrantList() {
               className={styles.searchInput}
               placeholder="Buscar por nome, CPF, cidade ou e-mail..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
             />
             {searchQuery && (
               <button
                 className={styles.clearSearch}
-                onClick={() => setSearchQuery('')}
+                onClick={() => handleSearchChange('')}
                 title="Limpar busca"
               >
                 <X size={14} />
@@ -172,7 +209,7 @@ export function ImmigrantList() {
           <select
             className={styles.filterSelect}
             value={filterCountry}
-            onChange={(e) => setFilterCountry(e.target.value)}
+            onChange={(e) => handleCountryChange(e.target.value)}
           >
             <option value="">Todas as nacionalidades ({countries.length})</option>
             {countries.map((c) => (
@@ -244,6 +281,7 @@ export function ImmigrantList() {
                 onClick={() => {
                   setSearchQuery('');
                   setFilterCountry('');
+                  setPage(1);
                 }}
               >
                 Limpar Filtros
@@ -273,7 +311,7 @@ export function ImmigrantList() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((immigrant) => (
+                {paginated.map((immigrant) => (
                   <tr key={immigrant.id}>
                     <td>
                       <div className={styles.nameCell}>
@@ -328,17 +366,13 @@ export function ImmigrantList() {
               </tbody>
             </table>
           </div>
-          <div className={styles.tableFooter}>
-            <span className={styles.countText}>
-              Exibindo {filtered.length} de {immigrants.length} imigrante
-              {immigrants.length !== 1 ? 's' : ''}
-            </span>
-          </div>
+          <div className={styles.tableFooter}>{pagination}</div>
         </div>
       ) : (
         /* Grid Mode */
-        <div className={styles.gridContainer}>
-          {filtered.map((immigrant) => (
+        <>
+          <div className={styles.gridContainer}>
+          {paginated.map((immigrant) => (
             <div key={immigrant.id} className={styles.cardItem}>
               <div className={styles.cardHeader}>
                 <div className={styles.cardUser}>
@@ -386,7 +420,11 @@ export function ImmigrantList() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+          <div className={`${styles.tableCard} ${styles.tableFooter}`} style={{ marginTop: 20 }}>
+            {pagination}
+          </div>
+        </>
       )}
     </PageContainer>
   );

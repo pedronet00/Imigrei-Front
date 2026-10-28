@@ -308,7 +308,9 @@ export function ImmigrantDossier() {
             </span>
             <span className={styles.profileMetaItem}>
               <MapPin size={14} />
-              {immigrant.brazilAddress.city}, {immigrant.brazilAddress.state}
+              {immigrant.brazilAddress?.city
+                ? `${immigrant.brazilAddress.city}, ${immigrant.brazilAddress.state}`
+                : 'Não informado'}
             </span>
             <span className={styles.profileMetaItem}>
               <Briefcase size={14} />
