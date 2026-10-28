@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Globe, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -43,11 +43,9 @@ export function Login() {
         <div className={styles.card}>
           <div className={styles.header}>
             <div className={styles.logoWrapper}>
-              <div className={styles.logo}>
-                <Globe size={28} />
-              </div>
+              <img className={styles.logo} src="/images/imigrei-icone.svg" alt="Imigrei" />
             </div>
-            <h1 className={styles.title}>Bem-vindo</h1>
+            <h1 className={styles.title}>Bem-vindo ao Imigrei</h1>
             <p className={styles.subtitle}>
               Sistema de Gestão de Imigrantes
             </p>

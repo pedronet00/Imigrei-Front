@@ -29,30 +29,28 @@
 }
 
 .brandMark {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--text-primary);
-  color: var(--bg-secondary);
-  font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 30px;
+  height: 30px;
+  display: block;
   flex-shrink: 0;
 }
 
 .brandName {
   font-family: var(--font-heading);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
   white-space: nowrap;
 }
 
 .collapsed .brandName {
   display: none;
+}
+
+.collapsed .brand {
+  justify-content: center;
+  padding: 0;
 }
 
 /* Navigation */
@@ -224,6 +222,11 @@
   .collapsed .collapseBtn {
     justify-content: flex-start;
     padding: 0 10px;
+  }
+
+  .collapsed .brand {
+    justify-content: flex-start;
+    padding: 0 22px;
   }
 
   .footer {

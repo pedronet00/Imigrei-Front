@@ -69,10 +69,8 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onNavigate }: Sidebar
       className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''} ${mobileOpen ? styles.mobileOpen : ''}`}
     >
       <div className={styles.brand}>
-        <span className={styles.brandMark} aria-hidden="true">
-          I
-        </span>
-        <span className={styles.brandName}>Imigrantes</span>
+        <img className={styles.brandMark} src="/images/imigrei-icone.svg" alt="" aria-hidden="true" />
+        <span className={styles.brandName}>Imigrei</span>
       </div>
 
       <nav className={styles.nav} aria-label="Menu principal">

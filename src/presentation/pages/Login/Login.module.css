@@ -58,14 +58,9 @@
 }
 
 .logo {
-  width: 56px;
-  height: 56px;
-  background: var(--brand-primary);
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
+  width: 64px;
+  height: 64px;
+  display: block;
 }
 
 .title {
