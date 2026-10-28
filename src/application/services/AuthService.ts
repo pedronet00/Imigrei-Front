@@ -51,6 +51,65 @@ export function getAccessToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+function storeSession(data: AuthResponseDto): AuthUser {
+  const user = mapUsuarioToAuthUser(data.usuario);
+  localStorage.setItem(TOKEN_KEY, data.accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+  localStorage.setItem(EXPIRES_AT_KEY, data.expiraEm);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  return user;
+}
+
+// Shared across callers so several requests failing with 401 at once
+// trigger a single POST /Auth/refresh
+let refreshInFlight: Promise<boolean> | null = null;
+
+export function refreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+      if (!refreshToken) return false;
+      try {
+        const response = await fetch(`${API_BASE_URL}/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!response.ok) return false;
+        storeSession((await response.json()) as AuthResponseDto);
+        return true;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+function withAuthHeader(init: RequestInit, token: string | null): RequestInit {
+  const headers = new Headers(init.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return { ...init, headers };
+}
+
+// fetch with the bearer token; on 401 refreshes the session once and resends the request
+export async function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const sentToken = getAccessToken();
+  const response = await fetch(url, withAuthHeader(init, sentToken));
+  if (response.status !== 401) return response;
+
+  // Another request may have already refreshed the token meanwhile
+  const currentToken = getAccessToken();
+  if (currentToken && currentToken !== sentToken) {
+    return fetch(url, withAuthHeader(init, currentToken));
+  }
+
+  if (!(await refreshSession())) return response;
+  return fetch(url, withAuthHeader(init, getAccessToken()));
+}
+
 export interface RegisterUserData {
   name: string;
   email: string;
@@ -74,13 +133,9 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
 }
 
 async function authorizedPost(path: string, payload: unknown): Promise<Response> {
-  const token = getAccessToken();
-  return fetch(`${API_BASE_URL}/${path}`, {
+  return authFetch(`${API_BASE_URL}/${path}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 }
@@ -119,12 +174,7 @@ export class AuthService {
     }
 
     const data = (await response.json()) as AuthResponseDto;
-    const user = mapUsuarioToAuthUser(data.usuario);
-
-    localStorage.setItem(TOKEN_KEY, data.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    localStorage.setItem(EXPIRES_AT_KEY, data.expiraEm);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    const user = storeSession(data);
 
     return { success: true, user, token: data.accessToken };
   }
@@ -184,6 +234,8 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     if (!getAccessToken()) return false;
+    // An expired access token is renewed on the first 401, as long as there is a refresh token
+    if (localStorage.getItem(REFRESH_TOKEN_KEY)) return true;
     const expiresAt = localStorage.getItem(EXPIRES_AT_KEY);
     if (!expiresAt) return false;
     return new Date(expiresAt).getTime() > Date.now();

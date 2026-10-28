@@ -4,7 +4,7 @@ import type { ReportParams } from '../../domain/entities/Report';
 import {
   API_BASE_URL,
   UnauthorizedError,
-  authHeaders,
+  authFetch,
   fileNameFromContentDisposition,
   readProblemDetail,
 } from '../http/apiClient';
@@ -22,9 +22,8 @@ export class ApiReportRepository implements IReportRepository {
     if (params.startDate) query.set('dataInicio', params.startDate);
     if (params.endDate) query.set('dataFim', params.endDate);
 
-    const response = await fetch(`${this.baseUrl}/${reportCode}?${query}`, {
+    const response = await authFetch(`${this.baseUrl}/${reportCode}?${query}`, {
       method: 'GET',
-      headers: authHeaders(),
     });
     if (response.status === 401) {
       throw new UnauthorizedError();

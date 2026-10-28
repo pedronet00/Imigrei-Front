@@ -6,7 +6,7 @@ import { MockImmigrantRepository } from './MockImmigrantRepository';
 import {
   API_BASE_URL,
   UnauthorizedError,
-  authHeaders,
+  authFetch,
   fileNameFromContentDisposition,
   historyTypeToNumber,
   numberToHistoryType,
@@ -280,9 +280,9 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   private mockFallback = new MockImmigrantRepository();
 
   async getAll(): Promise<Immigrant[]> {
-    const response = await fetch(this.baseUrl, {
+    const response = await authFetch(this.baseUrl, {
       method: 'GET',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      headers: { 'Content-Type': 'application/json' },
     });
     if (response.status === 401) {
       throw new UnauthorizedError();
@@ -296,9 +296,9 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
 
   async getById(id: string): Promise<Immigrant | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
+      const response = await authFetch(`${this.baseUrl}/${id}`, {
         method: 'GET',
-        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
       });
       if (response.ok) {
         const item = await response.json();
@@ -319,9 +319,9 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
     const payload = mapImmigrantToApiCreateDto(data);
 
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await authFetch(this.baseUrl, {
         method: 'POST',
-        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -353,9 +353,9 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
       const merged = { ...existing, ...data } as Immigrant;
       const payload = mapImmigrantToApiCreateDto(merged);
 
-      const response = await fetch(`${this.baseUrl}/${id}`, {
+      const response = await authFetch(`${this.baseUrl}/${id}`, {
         method: 'PUT',
-        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -379,9 +379,8 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
 
   async delete(id: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
+      const response = await authFetch(`${this.baseUrl}/${id}`, {
         method: 'DELETE',
-        headers: authHeaders(),
       });
       if (!response.ok) {
         throw new Error(`Erro ao remover imigrante (HTTP ${response.status})`);
@@ -393,9 +392,8 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   }
 
   async getDocuments(immigrantId: string): Promise<ImmigrantDocument[]> {
-    const response = await fetch(`${this.filesBaseUrl}/imigrante/${immigrantId}`, {
+    const response = await authFetch(`${this.filesBaseUrl}/imigrante/${immigrantId}`, {
       method: 'GET',
-      headers: authHeaders(),
     });
     if (response.status === 401) {
       throw new UnauthorizedError();
@@ -412,9 +410,8 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   }
 
   async downloadDocument(doc: ImmigrantDocument): Promise<DocumentFile> {
-    const response = await fetch(`${this.filesBaseUrl}/${doc.id}/download`, {
+    const response = await authFetch(`${this.filesBaseUrl}/${doc.id}/download`, {
       method: 'GET',
-      headers: authHeaders(),
     });
     if (response.status === 401) {
       throw new UnauthorizedError();
@@ -433,9 +430,8 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
     const formData = new FormData();
     formData.append('arquivo', file);
 
-    const response = await fetch(`${this.filesBaseUrl}/imigrante/${immigrantId}`, {
+    const response = await authFetch(`${this.filesBaseUrl}/imigrante/${immigrantId}`, {
       method: 'POST',
-      headers: authHeaders(),
       body: formData,
     });
     if (response.status === 401) {
@@ -454,9 +450,8 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   }
 
   async getHistory(immigrantId: string): Promise<HistoryEntry[]> {
-    const response = await fetch(`${this.actionsBaseUrl}/imigrante/${immigrantId}`, {
+    const response = await authFetch(`${this.actionsBaseUrl}/imigrante/${immigrantId}`, {
       method: 'GET',
-      headers: authHeaders(),
     });
     if (response.status === 401) {
       throw new UnauthorizedError();
@@ -473,9 +468,9 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   }
 
   async addHistoryEntry(immigrantId: string, entry: NewHistoryEntry): Promise<HistoryEntry> {
-    const response = await fetch(`${this.actionsBaseUrl}/imigrante/${immigrantId}`, {
+    const response = await authFetch(`${this.actionsBaseUrl}/imigrante/${immigrantId}`, {
       method: 'POST',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         acao: entry.description,
         tipoAcao: historyTypeToNumber(entry.type),
@@ -493,9 +488,9 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   }
 
   async updateHistoryEntry(entryId: string, entry: NewHistoryEntry): Promise<void> {
-    const response = await fetch(`${this.actionsBaseUrl}/${entryId}`, {
+    const response = await authFetch(`${this.actionsBaseUrl}/${entryId}`, {
       method: 'PUT',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         acao: entry.description,
         tipoAcao: historyTypeToNumber(entry.type),
@@ -511,9 +506,8 @@ export class ApiImmigrantRepository implements IImmigrantRepository {
   }
 
   async removeHistoryEntry(entryId: string): Promise<void> {
-    const response = await fetch(`${this.actionsBaseUrl}/${entryId}`, {
+    const response = await authFetch(`${this.actionsBaseUrl}/${entryId}`, {
       method: 'DELETE',
-      headers: authHeaders(),
     });
     if (response.status === 401) {
       throw new UnauthorizedError();

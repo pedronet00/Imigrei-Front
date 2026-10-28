@@ -1,4 +1,4 @@
-import { getAccessToken } from '../../application/services/AuthService';
+import { authFetch } from '../../application/services/AuthService';
 import type { HistoryType } from '../../domain/entities/HistoryEntry';
 
 export { API_BASE_URL } from './apiBaseUrl';
@@ -10,10 +10,7 @@ export class UnauthorizedError extends Error {
   }
 }
 
-export function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
-  const token = getAccessToken();
-  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
-}
+export { authFetch };
 
 // The API returns UTC timestamps without a zone suffix
 export function parseApiUtcDate(value: string): string {

@@ -3,7 +3,7 @@ import type { DashboardSummary } from '../../domain/entities/DashboardSummary';
 import {
   API_BASE_URL,
   UnauthorizedError,
-  authHeaders,
+  authFetch,
   numberToHistoryType,
   parseApiUtcDate,
   readProblemDetail,
@@ -49,9 +49,8 @@ export class ApiDashboardRepository implements IDashboardRepository {
   private baseUrl = `${API_BASE_URL}/Dashboard`;
 
   async getSummary(): Promise<DashboardSummary> {
-    const response = await fetch(this.baseUrl, {
+    const response = await authFetch(this.baseUrl, {
       method: 'GET',
-      headers: authHeaders(),
     });
     if (response.status === 401) {
       throw new UnauthorizedError();
